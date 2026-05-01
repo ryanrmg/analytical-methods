@@ -1,13 +1,13 @@
 package main
 
 import (
-	"log"
 	"context"
-	"time"
+	"log"
 	"os"
+	"time"
 
 	"github.com/ryanrmg/analytical-methods/analytics"
-	"github.com/ryanrmg/projectx-api"
+	projectx "github.com/ryanrmg/projectx-api"
 )
 
 func main() {
@@ -36,17 +36,14 @@ func main() {
 		log.Fatal("Failed to get accounts")
 	}
 
-	analyticsService := NewAnalyticsService(client)
+	analyticsService := analytics.NewAnalyticsService(client)
 
 	for _, account := range accounts {
 		analyticsService.Log.GetAndLogOrders(
 			ctx,
-			account.AccountId, time.Now().UTC().Add(-time.Duration(24*5) * time.Hour).Format(time.RFC3339),
+			account.Id, time.Now().UTC().Add(-time.Duration(24*5)*time.Hour).Format(time.RFC3339),
 			time.Now().UTC().Format(time.RFC3339),
 		)
 	}
 
-	// 
-
-	// 
 }
