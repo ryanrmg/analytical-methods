@@ -12,16 +12,26 @@ type LogService struct {
 	client *projectx.ProjectXClient
 }
 
-func (l *LogService) GetAndLogOrders(ctx context.Context, accountId int, startTime, endTime string) {
-	orders, err := l.client.Orders.OrderSearch(ctx, projectx.OrderSearchRequest{
-		AccountId:      accountId,
-		StartTimestamp: startTime,
-		EndTimestamp:   endTime,
-	})
+func (l *LogService) StreamOrdersToCSV(ctx context.Context) error {
+	startTime := time.Now().Format("2006-01-02_15-04-05")
+	filename := fmt.Sprintf("orders-stream-%s.csv", startTime)
 
+	f, err := os.Create(filename)
 	if err != nil {
-		log.Fatal("Failed to get orders")
+		return err
 	}
+	defer f.Close()
 
-	fmt.Println(orders)
+	f.WriteString(projectx.GatewayUserOrderCSVHeader() + "\n")
+
+	for {
+		select {
+		case order := <-l.client.Realtime.UserOrdersStream():
+			f.WriteString(order.ToCSVRow() + "\n")
+
+		case <-ctx.Done():
+			fmt.Println("stopped logging orders")
+			return nil
+		}
+	}
 }
