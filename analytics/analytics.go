@@ -5,11 +5,13 @@ import (
 )
 
 type AnalyticsService struct {
-	Log *LogService
+	LogUser   *LogServiceUser
+	LogMarket *LogServiceMarket
 }
 
 func NewAnalyticsService(client *projectx.ProjectXClient) *AnalyticsService {
 	a := &AnalyticsService{}
-	a.Log = &LogService{client: client}
+	a.LogUser = &LogServiceUser{client: client}
+	a.LogMarket = &LogServiceMarket{client: client}
 	return a
 }
