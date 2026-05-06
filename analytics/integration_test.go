@@ -2,10 +2,10 @@ package analytics
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
 	"time"
-	"log"
 
 	"github.com/ryanrmg/projectx-api"
 )
@@ -21,7 +21,7 @@ func TestAnalytics_Live(t *testing.T) {
 
 	client := projectx.NewProjectXClient(
 		"https://api.topstepx.com/api",
-		"rtc.topstepx.com/hubs",
+		"rtc.topstepx.com/hubs/",
 		username,
 		apiKey,
 	)
@@ -33,17 +33,19 @@ func TestAnalytics_Live(t *testing.T) {
 
 	// subscribe
 	contract1 := "CON.F.US.MNQ.M26"
+	symbolId1 := "F.US.MNQ"
 	if err := client.Realtime.SubscribeContractTrades(contract1); err != nil {
 		t.Fatalf("subscribe error: %v", err)
 	}
 
 	contract2 := "CON.F.US.MES.M26"
+	symbolId2 := "F.US.MES"
 	if err := client.Realtime.SubscribeContractTrades(contract2); err != nil {
 		t.Fatalf("subscribe error: %v", err)
 	}
 
 	analyticsService := NewAnalyticsService(client)
-	corrStream := analyticsService.Pairs.Correlation(ctx, contract1, contract2)
+	corrStream := analyticsService.Pairs.Correlation(ctx, symbolId1, symbolId2)
 
 	timeout := time.After(25 * time.Second)
 	received := false

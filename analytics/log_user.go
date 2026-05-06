@@ -3,8 +3,8 @@ package analytics
 import (
 	"context"
 	"fmt"
-	"time"
 	"os"
+	"time"
 
 	"github.com/ryanrmg/projectx-api"
 )

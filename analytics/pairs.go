@@ -3,7 +3,6 @@ package analytics
 import (
 	"context"
 	"math"
-	"fmt"
 
 	"github.com/ryanrmg/projectx-api"
 )
@@ -51,7 +50,7 @@ func corr(x, y []float64) float64 {
 	return sxy / math.Sqrt(sx*sy)
 }
 
-func (p *PairsIndicator) Correlation(ctx context.Context, contractId1, contractId2 string) <- chan float64 {
+func (p *PairsIndicator) Correlation(ctx context.Context, symbolId1, symbolId2 string) <-chan float64 {
 
 	out := make(chan float64, 10)
 
@@ -70,17 +69,17 @@ func (p *PairsIndicator) Correlation(ctx context.Context, contractId1, contractI
 				return
 
 			case t := <-stream:
-				fmt.Println(t)
+
 				switch t.SymbolId {
 
-				case contractId1:
+				case symbolId1:
 					if last1 != 0 {
 						ret := math.Log(t.Price / last1)
 						r1.add(ret)
 					}
 					last1 = t.Price
 
-				case contractId2:
+				case symbolId2:
 					if last2 != 0 {
 						ret := math.Log(t.Price / last2)
 						r2.add(ret)
