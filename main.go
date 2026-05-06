@@ -29,21 +29,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	accounts, error := client.Accounts.Search(ctx, projectx.AccountSearchRequest{
-		OnlyActiveAccounts: true,
-	})
-	if error != nil {
-		log.Fatal("Failed to get accounts")
-	}
-
 	analyticsService := analytics.NewAnalyticsService(client)
 
-	for _, account := range accounts {
-		analyticsService.Log.GetAndLogOrders(
-			ctx,
-			account.Id, time.Now().UTC().Add(-time.Duration(24*5)*time.Hour).Format(time.RFC3339),
-			time.Now().UTC().Format(time.RFC3339),
-		)
-	}
+	analyticsService.LogMarket.StreamTradesToCSV(ctx)
 
 }
