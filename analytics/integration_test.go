@@ -3,7 +3,9 @@ package analytics
 import (
 	"context"
 	"log"
+	"math"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,25 +13,88 @@ import (
 )
 
 var (
-	username = os.Getenv("PROJECTX_USERNAME")
-	apiKey   = os.Getenv("PROJECTX_API_KEY")
+	client *projectx.ProjectXClient
+	once   sync.Once
 )
 
-func TestAnalytics_Live(t *testing.T) {
+func getClient() *projectx.ProjectXClient {
+	once.Do(func() {
+		client = projectx.NewProjectXClient(
+			"https://api.topstepx.com/api",
+			"rtc.topstepx.com/hubs/",
+			os.Getenv("PROJECTX_USERNAME"),
+			os.Getenv("PROJECTX_API_KEY"),
+		)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+
+		if err := client.Realtime.Connect(ctx); err != nil {
+			panic(err)
+		}
+	})
+	return client
+}
+
+func TestAnalytics_Static(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	client := projectx.NewProjectXClient(
-		"https://api.topstepx.com/api",
-		"rtc.topstepx.com/hubs/",
-		username,
-		apiKey,
-	)
+	client := getClient()
 
 	// connect
 	if err := client.Realtime.Connect(ctx); err != nil {
 		t.Fatalf("connect error: %v", err)
 	}
+
+	req1 := projectx.BarHistoryRequest{
+		ContractId:        "CON.F.US.MNQ.M26",
+		Live:              false,
+		EndTime:           time.Now().UTC().Format(time.RFC3339),
+		StartTime:         time.Now().UTC().Add(-time.Duration(24*5) * time.Hour).Format(time.RFC3339),
+		Unit:              2,
+		UnitNumber:        5,
+		Limit:             100,
+		IncludePartialBar: false,
+	}
+
+	req2 := projectx.BarHistoryRequest{
+		ContractId:        "CON.F.US.MES.M26",
+		Live:              false,
+		EndTime:           time.Now().UTC().Format(time.RFC3339),
+		StartTime:         time.Now().UTC().Add(-time.Duration(24*5) * time.Hour).Format(time.RFC3339),
+		Unit:              2,
+		UnitNumber:        5,
+		Limit:             100,
+		IncludePartialBar: false,
+	}
+
+	analyticsService := NewAnalyticsService(client)
+
+	corr := analyticsService.Pairs.StaticCorrelation(ctx, req1, req2)
+
+	log.Println("STATIC CORRELATION:", corr)
+
+	// basic sanity assertions
+	if math.IsNaN(corr) {
+		t.Fatal("correlation is NaN")
+	}
+
+	if corr < -1 || corr > 1 {
+		t.Fatalf("invalid correlation value: %f", corr)
+	}
+
+	// MNQ/MES should generally have positive correlation
+	if corr < 0.3 {
+		t.Logf("warning: unexpectedly low correlation: %f", corr)
+	}
+}
+
+func TestAnalytics_Live(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	client := getClient()
 
 	// subscribe
 	contract1 := "CON.F.US.MNQ.M26"

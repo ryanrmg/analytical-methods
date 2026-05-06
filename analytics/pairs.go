@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"context"
+	"log"
 	"math"
 
 	"github.com/ryanrmg/projectx-api"
@@ -48,6 +49,61 @@ func corr(x, y []float64) float64 {
 	}
 
 	return sxy / math.Sqrt(sx*sy)
+}
+
+func (p *PairsIndicator) StaticCorrelation(ctx context.Context, req1, req2 projectx.BarHistoryRequest) float64 {
+
+	history1, err := p.client.Markets.History(ctx, req1)
+	if err != nil {
+		log.Printf("failed history1: %v", err)
+		return 0
+	}
+
+	history2, err := p.client.Markets.History(ctx, req2)
+	if err != nil {
+		log.Printf("failed history2: %v", err)
+		return 0
+	}
+
+	if len(history1) < 2 || len(history2) < 2 {
+		return 0
+	}
+
+	// Use shortest aligned length
+	n := len(history1)
+	if len(history2) < n {
+		n = len(history2)
+	}
+
+	// Build return series
+	returns1 := make([]float64, 0, n-1)
+	returns2 := make([]float64, 0, n-1)
+
+	for i := 1; i < n; i++ {
+		prev1 := history1[i-1].Close
+		cur1 := history1[i].Close
+
+		prev2 := history2[i-1].Close
+		cur2 := history2[i].Close
+
+		// Prevent divide-by-zero
+		if prev1 == 0 || prev2 == 0 {
+			continue
+		}
+
+		// Simple returns
+		r1 := (cur1 - prev1) / prev1
+		r2 := (cur2 - prev2) / prev2
+
+		returns1 = append(returns1, r1)
+		returns2 = append(returns2, r2)
+	}
+
+	if len(returns1) < 2 || len(returns2) < 2 {
+		return 0
+	}
+
+	return corr(returns1, returns2)
 }
 
 func (p *PairsIndicator) Correlation(ctx context.Context, symbolId1, symbolId2 string) <-chan float64 {
