@@ -75,7 +75,7 @@ func (l *LogServiceUser) StreamPositionsToCSV(ctx context.Context) error {
 
 	for {
 		select {
-		case order := <-l.client.Realtime.UserTradeStream():
+		case order := <-l.client.Realtime.UserPositionStream():
 			f.WriteString(order.ToCSVRow() + "\n")
 
 		case <-ctx.Done():
