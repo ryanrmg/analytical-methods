@@ -1,26 +1,19 @@
 package analytics
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/ryanrmg/projectx-api"
 )
 
 // TradeHandler handles requests from the React frontend
 type TradeHandler struct {
 	DB *DBStore // Using the DBStore wrapper we created earlier
 }
-
-package main
-
-import (
-	"encoding/json"
-	"errors"
-	"net/http"
-	"strconv"
-	
-	"github.com/jackc/pgx/v5"
-)
 
 func (h *TradeHandler) GetUserTradesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -37,7 +30,7 @@ func (h *TradeHandler) GetUserTradesHandler(w http.ResponseWriter, r *http.Reque
 
 	// 1. Try to read from your local PostgreSQL database first
 	trades, err := h.DB.GetTradesByAccount(ctx, accountID)
-	
+
 	// 2. If nothing is available (empty slice) OR the database throws an error, fallback to API
 	if err != nil || len(trades) == 0 {
 		// Log that we missed the cache
@@ -52,11 +45,11 @@ func (h *TradeHandler) GetUserTradesHandler(w http.ResponseWriter, r *http.Reque
 		}
 
 		// 4. Populate the database asynchronously so it doesn't block the user's view
-		go func(tradesToSave []GatewayUserTrade) {
+		go func(tradesToSave []projectx.GatewayUserTrade) {
 			for _, trade := range tradesToSave {
 				if saveErr := h.DB.SaveUserTrade(context.Background(), trade); saveErr != nil {
 					// Simply log the error; don't crash the application
-					println("Error populating database:", saveErr.Error()) 
+					println("Error populating database:", saveErr.Error())
 				}
 			}
 			println("Successfully populated database with fresh API logs.")

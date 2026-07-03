@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -125,11 +126,11 @@ func (store *DBStore) GetTradesByAccount(ctx context.Context, accountID int) ([]
 	defer rows.Close() // Crucial to prevent connection leaks
 
 	// 3. Create a slice to hold our results
-	var trades []GatewayUserTrade
+	var trades []projectx.GatewayUserTrade
 
 	// 4. Loop through the result rows
 	for rows.Next() {
-		var t GatewayUserTrade
+		var t projectx.GatewayUserTrade
 		var dbTime interface{} // To temporarily hold the timestamp object
 
 		// Scan the columns into the struct fields.
