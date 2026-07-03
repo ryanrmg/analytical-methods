@@ -38,3 +38,8 @@ func main() {
 	}
 }
 ```
+
+
+```bash
+psql -U trading_user -d trading_db -h localhost
+```

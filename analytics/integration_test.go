@@ -138,7 +138,7 @@ func TestAnalytics_Live(t *testing.T) {
 
 }
 
-func TestDatabase_Static(t *testing.T) {
+func TestDatabase_LoadStatic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

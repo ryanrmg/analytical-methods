@@ -104,3 +104,71 @@ func (store *DBStore) GetLatestResponse(ctx context.Context, endpoint string) (s
 
 	return responseJSON, fetchedAt, nil
 }
+
+// GetTradesByAccount retrieves all stored trades for a specific account ID ordered by newest first
+func (store *DBStore) GetTradesByAccount(ctx context.Context, accountID int) ([]projectx.GatewayUserTrade, error) {
+	// 1. Write the SQL query
+	query := `
+		SELECT
+			id, account_id, contract_id, creation_timestamp,
+			price, profit_and_loss, fees, side, size, voided, order_id
+		FROM user_trades
+		WHERE account_id = $1
+		ORDER BY creation_timestamp DESC;
+	`
+
+	// 2. Execute the query
+	rows, err := store.pool.Query(ctx, query, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer rows.Close() // Crucial to prevent connection leaks
+
+	// 3. Create a slice to hold our results
+	var trades []GatewayUserTrade
+
+	// 4. Loop through the result rows
+	for rows.Next() {
+		var t GatewayUserTrade
+		var dbTime interface{} // To temporarily hold the timestamp object
+
+		// Scan the columns into the struct fields.
+		// The order here MUST exactly match the order in your SELECT statement.
+		err := rows.Scan(
+			&t.Id,
+			&t.AccountId,
+			&t.ContractId,
+			&dbTime,
+			&t.Price,
+			&t.ProfitAndLoss,
+			&t.Fees,
+			&t.Side,
+			&t.Size,
+			&t.Voided,
+			&t.OrderId,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		// Convert the database timestamp into the string format your JSON expects
+		if tm, ok := dbTime.(string); ok {
+			t.CreationTimestamp = tm
+		} else if tm, ok := dbTime.(fmt.Stringer); ok {
+			t.CreationTimestamp = tm.String()
+		} else {
+			// Fallback string conversion depending on how your specific driver environment maps TIMESTAMPTZ
+			t.CreationTimestamp = fmt.Sprintf("%v", dbTime)
+		}
+
+		// Append the hydrated struct to our slice
+		trades = append(trades, t)
+	}
+
+	// 5. Check for errors encountered during iteration
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during row iteration: %w", err)
+	}
+
+	return trades, nil
+}
